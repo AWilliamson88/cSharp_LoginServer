@@ -24,11 +24,28 @@ namespace LoginServer
             pipeServer.MessageRecieved += pipeServer_MessageReceived;
             pipeServer.ClientDisconnected += pipeServer_ClientDisconnected;
             pipeServer.GetAdminDetails += pipeServer_GetAdminDetails;
-            DisableMessaging();
+            pipeServer.AllowMessaging += pipeServer_AllowMessaging;
+            NoClients();
         }
 
 
-        private void DisableMessaging()
+        private void pipeServer_AllowMessaging()
+        {
+            Invoke(new PipeServer.AllowMessagingHandler(AllowMessaging));
+        }
+
+        private void AllowMessaging()
+        {
+            SendBtn.Enabled = true;
+            SendMessageTB.Enabled = true;
+            SendMessageTB.Focus();
+
+            string str = "Total Clients: " + pipeServer.TotalConnectedClients;
+
+            MessageLogTB.Text += str + "\r\n";
+        }
+
+        private void NoClients()
         {
             SendBtn.Enabled = false;
             SendMessageTB.Enabled = false;
@@ -50,6 +67,11 @@ namespace LoginServer
 
         private string pipeServer_GetAdminDetails()
         {
+            return (string) Invoke(new PipeServer.GetAdminDetailsHandler(GetAdminDetails));   
+        }
+
+        private String GetAdminDetails()
+        {
             return AdminUsernameTB.Text + "," + AdminPasswordTB.Text;
         }
 
@@ -60,7 +82,14 @@ namespace LoginServer
 
         private void ClientDisconnected()
         {
-            MessageBox.Show("Total connected clients: " + pipeServer.TotalConnectedClients);
+            string str = "Total Clients: " + pipeServer.TotalConnectedClients;
+            
+            MessageLogTB.Text += str + "\r\n";
+            
+            if (pipeServer.TotalConnectedClients == 0)
+            {
+                NoClients();
+            }
         }
 
         private void pipeServer_MessageReceived(byte[] message)

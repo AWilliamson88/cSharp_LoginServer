@@ -180,6 +180,10 @@ namespace LoginServer
 
         public event GetAdminDetailsHandler GetAdminDetails;
 
+        public delegate void AllowMessagingHandler();
+
+        public event AllowMessagingHandler AllowMessaging;
+
         public void Start(string pipename)
         {
             PipeNameIs(pipename);
@@ -258,6 +262,8 @@ namespace LoginServer
                     IsBackground = true
                 };
                 readThread.Start(client);
+
+                AllowMessaging();
             }
 
             // Free up the pointers.
@@ -374,6 +380,8 @@ namespace LoginServer
             else
             {
                 IsLoggedIn(false);
+                str = "Login atempt failed.";
+                byte[] message = encoder.GetBytes(str);
             }
 
             SendClientValidationMessage();
@@ -398,6 +406,7 @@ namespace LoginServer
             if (IsLoggedIn())
             {
                 message = encoder.GetBytes("You are now logged in.");
+
             }
             else
             {
