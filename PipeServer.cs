@@ -108,7 +108,8 @@ namespace LoginServer
         /// Set whether the Server is currently running or not.
         /// </summary>
         /// <param name="b">Takes a boolean value</param>
-        private void IsRunning(bool b) {
+        private void IsRunning(bool b)
+        {
             running = b;
         }
 
@@ -151,7 +152,7 @@ namespace LoginServer
         {
             public SafeFileHandle handle;
             public FileStream stream;
-            
+
         }
 
         /// <summary>
@@ -323,7 +324,7 @@ namespace LoginServer
                         {
                             ValidateClient(ms.ToArray());
                         }
-                        
+
                     }
 
                 }
@@ -358,24 +359,36 @@ namespace LoginServer
             string str = encoder.GetString(adminDetailsFromClient, 0, adminDetailsFromClient.Length);
 
             string[] clientAdminDetails = str.Split(',');
-
             string[] adminDetails = GetAdminDetails().Split(',');
 
-            MessageRecieved(encoder.GetBytes(GetAdminDetails()));
-            MessageRecieved(adminDetailsFromClient);
+            bool username = ValidateUsername(adminDetails[0], clientAdminDetails[0]);
 
-            for (int i = 0; i < adminDetails.Length; i++)
+            PasswordTester LH = new PasswordTester();
+            bool password = LH.TestPasswords(adminDetails[1], clientAdminDetails[1]);
+
+
+            if (username && password)
             {
-                if (adminDetails[i].CompareTo(clientAdminDetails[i]) == 0)
-                {
-                    IsLoggedIn(true);
-                    continue;
-                }
-                IsLoggedIn(false);
-                break;
+                IsLoggedIn(true);
             }
+            else
+            {
+                IsLoggedIn(false);
+            }
+
             SendClientValidationMessage();
         }
+
+        private bool ValidateUsername(string adminName, string testName)
+        {
+            if (adminName.CompareTo(testName) == 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
 
         private void SendClientValidationMessage()
         {
@@ -412,7 +425,7 @@ namespace LoginServer
             }
         }
 
-        
+
 
 
 

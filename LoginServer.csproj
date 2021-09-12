@@ -46,6 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PasswordTester.cs" />
     <Compile Include="LoginServerForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -55,6 +56,8 @@
     <Compile Include="PipeServer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SaltGenerator.cs" />
+    <Compile Include="Utility.cs" />
     <EmbeddedResource Include="LoginServerForm.resx">
       <DependentUpon>LoginServerForm.cs</DependentUpon>
     </EmbeddedResource>
