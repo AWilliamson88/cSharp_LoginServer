@@ -91,6 +91,7 @@ namespace LoginServer
             this.AdminUsernameTB.Name = "AdminUsernameTB";
             this.AdminUsernameTB.Size = new System.Drawing.Size(132, 23);
             this.AdminUsernameTB.TabIndex = 9;
+            this.AdminUsernameTB.Text = "NotAdmin";
             // 
             // AdminPasswordTB
             // 
@@ -99,6 +100,7 @@ namespace LoginServer
             this.AdminPasswordTB.Name = "AdminPasswordTB";
             this.AdminPasswordTB.Size = new System.Drawing.Size(132, 23);
             this.AdminPasswordTB.TabIndex = 10;
+            this.AdminPasswordTB.Text = "Vitamins";
             // 
             // StartBtn
             // 

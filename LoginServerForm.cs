@@ -23,6 +23,7 @@ namespace LoginServer
         {
             pipeServer.MessageRecieved += pipeServer_MessageReceived;
             pipeServer.ClientDisconnected += pipeServer_ClientDisconnected;
+            pipeServer.GetAdminDetails += pipeServer_GetAdminDetails;
             DisableMessaging();
         }
 
@@ -47,6 +48,11 @@ namespace LoginServer
             }
         }
 
+        private string pipeServer_GetAdminDetails()
+        {
+            return AdminUsernameTB.Text + "," + AdminPasswordTB.Text;
+        }
+
         private void pipeServer_ClientDisconnected()
         {
             Invoke(new PipeServer.ClientDisconnectedHandler(ClientDisconnected));
@@ -63,7 +69,7 @@ namespace LoginServer
                 new object[] { message });
         }
 
-        void DisplayMessageReceived(byte[] message)
+        private void DisplayMessageReceived(byte[] message)
         {
             ASCIIEncoding encoder = new ASCIIEncoding();
             string str = encoder.GetString(message, 0, message.Length);

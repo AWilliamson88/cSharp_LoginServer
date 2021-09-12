@@ -67,6 +67,11 @@ namespace LoginServer
         readonly List<Client> clients = new List<Client>();
 
         /// <summary>
+        /// Is the admin logged in.
+        /// </summary>
+        private bool isLoggedIn;
+
+        /// <summary>
         /// Variable for if the server is currently running.
         /// </summary>
         private bool running;
@@ -79,6 +84,16 @@ namespace LoginServer
         public const int BUFFER_SIZE = 4096;
 
         #region Accessors
+
+        private bool IsLoggedIn()
+        {
+            return isLoggedIn;
+        }
+
+        private void IsLoggedIn(bool clientLoggedIn)
+        {
+            isLoggedIn = clientLoggedIn;
+        }
 
         /// <summary>
         /// Returns true if the server is running.
@@ -136,6 +151,7 @@ namespace LoginServer
         {
             public SafeFileHandle handle;
             public FileStream stream;
+            
         }
 
         /// <summary>
@@ -158,6 +174,10 @@ namespace LoginServer
         /// Event is called when a client pipe is severed.
         /// </summary>
         public event ClientDisconnectedHandler ClientDisconnected;
+
+        public delegate string GetAdminDetailsHandler();
+
+        public event GetAdminDetailsHandler GetAdminDetails;
 
         public void Start(string pipename)
         {
@@ -295,7 +315,15 @@ namespace LoginServer
 
                     if (MessageRecieved != null)
                     {
-                        MessageRecieved(ms.ToArray());
+                        if (IsLoggedIn())
+                        {
+                            MessageRecieved(ms.ToArray());
+                        }
+                        else
+                        {
+                            ValidateClient(ms.ToArray());
+                        }
+                        
                     }
 
                 }
@@ -324,6 +352,47 @@ namespace LoginServer
 
         }
 
+        private void ValidateClient(byte[] adminDetailsFromClient)
+        {
+            ASCIIEncoding encoder = new ASCIIEncoding();
+            string str = encoder.GetString(adminDetailsFromClient, 0, adminDetailsFromClient.Length);
+
+            string[] clientAdminDetails = str.Split(',');
+
+            string[] adminDetails = GetAdminDetails().Split(',');
+
+            MessageRecieved(encoder.GetBytes(GetAdminDetails()));
+            MessageRecieved(adminDetailsFromClient);
+
+            for (int i = 0; i < adminDetails.Length; i++)
+            {
+                if (adminDetails[i].CompareTo(clientAdminDetails[i]) == 0)
+                {
+                    IsLoggedIn(true);
+                    continue;
+                }
+                IsLoggedIn(false);
+                break;
+            }
+            SendClientValidationMessage();
+        }
+
+        private void SendClientValidationMessage()
+        {
+            ASCIIEncoding encoder = new ASCIIEncoding();
+            byte[] message;
+
+            if (IsLoggedIn())
+            {
+                message = encoder.GetBytes("You are now logged in.");
+            }
+            else
+            {
+                message = encoder.GetBytes("Incorrect username or password.");
+            }
+
+            SendMessage(message);
+        }
 
         public void SendMessage(byte[] message)
         {
