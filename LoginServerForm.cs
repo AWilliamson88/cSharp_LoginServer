@@ -37,6 +37,7 @@ namespace LoginServer
         private void AllowMessaging()
         {
             SendBtn.Enabled = true;
+            ClearBtn.Enabled = true;
             SendMessageTB.Enabled = true;
             SendMessageTB.Focus();
 
@@ -49,6 +50,7 @@ namespace LoginServer
         {
             SendBtn.Enabled = false;
             SendMessageTB.Enabled = false;
+            ClearBtn.Enabled = false;
         }
 
         private void StartBtn_Click(object sender, EventArgs e)
@@ -100,24 +102,29 @@ namespace LoginServer
 
         private void DisplayMessageReceived(byte[] message)
         {
-            ASCIIEncoding encoder = new ASCIIEncoding();
-            string str = encoder.GetString(message, 0, message.Length);
+            //ASCIIEncoding encoder = new ASCIIEncoding();
+            //string str = encoder.GetString(message, 0, message.Length);
+            string str = Utility.ConvertToString(message);
 
             MessageLogTB.Text += str + "\r\n";
         }
 
         private void SendBtn_Click(object sender, EventArgs e)
         {
-            ASCIIEncoding encoder = new ASCIIEncoding();
-            byte[] messageBuffer = encoder.GetBytes(SendMessageTB.Text);
+            if (!String.IsNullOrWhiteSpace(SendMessageTB.Text))
+            {
+                byte[] messageBuffer = Utility.ConvertToBytes(SendMessageTB.Text);
 
-            pipeServer.SendMessage(messageBuffer);
+                pipeServer.SendMessage(messageBuffer);
+            }
             SendMessageTB.Clear();
+            SendMessageTB.Focus();
         }
 
         private void ClearBtn_Click(object sender, EventArgs e)
         {
             MessageLogTB.Clear();
+            SendMessageTB.Focus();
         }
     }
 }

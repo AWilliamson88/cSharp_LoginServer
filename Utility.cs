@@ -23,5 +23,19 @@ namespace LoginServer
             System.Buffer.BlockCopy(bytes, 0, chars, 0, bytes.Length);
             return new string(chars);
         }
+
+        public static byte[] ConvertToBytes(string str)
+        {
+            ASCIIEncoding encoder = new ASCIIEncoding();
+            byte[] array = encoder.GetBytes(str);
+            return array;
+        }
+
+        public static string ConvertToString(byte[] array)
+        {
+            ASCIIEncoding encoder = new ASCIIEncoding();
+            string str = encoder.GetString(array, 0, array.Length);
+            return str;
+        }
     }
 }

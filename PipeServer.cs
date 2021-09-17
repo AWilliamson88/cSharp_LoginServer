@@ -106,11 +106,17 @@ namespace LoginServer
 
         /// <summary>
         /// Set whether the Server is currently running or not.
+        /// Displays the server is running message.
         /// </summary>
         /// <param name="b">Takes a boolean value</param>
         private void IsRunning(bool b)
         {
             running = b;
+            //if (b)
+            //{
+            //    string str = "The Server is Running.";
+            //    MessageRecieved(Utility.ConvertToBytes(str));
+            //}
         }
 
         /// <summary>
@@ -176,12 +182,25 @@ namespace LoginServer
         /// </summary>
         public event ClientDisconnectedHandler ClientDisconnected;
 
+        /// <summary>
+        /// Handles the get admin details method call.
+        /// </summary>
+        /// <returns></returns>
         public delegate string GetAdminDetailsHandler();
 
+        /// <summary>
+        /// Event is called when the GetAdminDetails method is called.
+        /// </summary>
         public event GetAdminDetailsHandler GetAdminDetails;
 
+        /// <summary>
+        /// Handles the AllowMessaging method calls.
+        /// </summary>
         public delegate void AllowMessagingHandler();
 
+        /// <summary>
+        /// Event is called when the client has been validated.
+        /// </summary>
         public event AllowMessagingHandler AllowMessaging;
 
         public void Start(string pipename)
@@ -196,6 +215,8 @@ namespace LoginServer
             listenThread.Start();
 
             IsRunning(true);
+
+            
         }
 
         public void ListenForClients()
@@ -262,8 +283,6 @@ namespace LoginServer
                     IsBackground = true
                 };
                 readThread.Start(client);
-
-                AllowMessaging();
             }
 
             // Free up the pointers.
@@ -330,12 +349,9 @@ namespace LoginServer
                         {
                             ValidateClient(ms.ToArray());
                         }
-
                     }
-
                 }
             }
-
 
             // The clients must be locked, otherwise "stream.Close()"
             // could be called while SendMessage(byte[]) is being called on another thread.
@@ -359,10 +375,13 @@ namespace LoginServer
 
         }
 
+        #region ClientValidation
+
         private void ValidateClient(byte[] adminDetailsFromClient)
         {
-            ASCIIEncoding encoder = new ASCIIEncoding();
-            string str = encoder.GetString(adminDetailsFromClient, 0, adminDetailsFromClient.Length);
+            //ASCIIEncoding encoder = new ASCIIEncoding();
+            //string str = encoder.GetString(adminDetailsFromClient, 0, adminDetailsFromClient.Length);
+            string str = Utility.ConvertToString(adminDetailsFromClient);
 
             string[] clientAdminDetails = str.Split(',');
             string[] adminDetails = GetAdminDetails().Split(',');
@@ -372,16 +391,16 @@ namespace LoginServer
             PasswordTester LH = new PasswordTester();
             bool password = LH.TestPasswords(adminDetails[1], clientAdminDetails[1]);
 
-
             if (username && password)
             {
                 IsLoggedIn(true);
+                AllowMessaging();
             }
             else
             {
                 IsLoggedIn(false);
-                str = "Login atempt failed.";
-                byte[] message = encoder.GetBytes(str);
+                //str = "Login atempt failed.";
+                //byte[] message = encoder.GetBytes(str);
             }
 
             SendClientValidationMessage();
@@ -415,6 +434,8 @@ namespace LoginServer
 
             SendMessage(message);
         }
+
+        #endregion
 
         public void SendMessage(byte[] message)
         {
