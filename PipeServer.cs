@@ -66,10 +66,14 @@ namespace LoginServer
         Thread listenThread;
         readonly List<Client> clients = new List<Client>();
 
-        /// <summary>
-        /// Is the admin logged in.
-        /// </summary>
-        private bool isLoggedIn;
+        public class Client
+        {
+            public SafeFileHandle handle;
+            public FileStream stream;
+            public bool isLoggedIn;
+
+
+        }
 
         /// <summary>
         /// Variable for if the server is currently running.
@@ -85,15 +89,6 @@ namespace LoginServer
 
         #region Accessors
 
-        private bool IsLoggedIn()
-        {
-            return isLoggedIn;
-        }
-
-        private void IsLoggedIn(bool clientLoggedIn)
-        {
-            isLoggedIn = clientLoggedIn;
-        }
 
         /// <summary>
         /// Returns true if the server is running.
@@ -154,12 +149,7 @@ namespace LoginServer
 
         #endregion
 
-        public class Client
-        {
-            public SafeFileHandle handle;
-            public FileStream stream;
-
-        }
+        
 
         /// <summary>
         /// Handles the messages recieved from the clients pipe.
@@ -275,6 +265,8 @@ namespace LoginServer
                     handle = clientHandle
                 };
 
+                Console.WriteLine(clientHandle.GetType().ToString());
+
                 lock (clients)
                     clients.Add(client);
 
@@ -282,7 +274,12 @@ namespace LoginServer
                 {
                     IsBackground = true
                 };
+
+                Console.WriteLine("New thread created." + readThread.ManagedThreadId);
+
                 readThread.Start(client);
+
+                Console.WriteLine(PipeNameIs());
             }
 
             // Free up the pointers.
@@ -341,13 +338,20 @@ namespace LoginServer
 
                     if (MessageRecieved != null)
                     {
-                        if (IsLoggedIn())
+                        /////////////////////////////
+
+                        Console.WriteLine(client.handle.ToString());
+                        Console.WriteLine(client.ToString());
+                        Console.WriteLine(client.stream.Name);
+
+                        ////////////////////////////
+                        if (client.isLoggedIn)
                         {
                             MessageRecieved(ms.ToArray());
                         }
                         else
                         {
-                            ValidateClient(ms.ToArray());
+                            ValidateClient(ms.ToArray(), client);
                         }
                     }
                 }
@@ -373,11 +377,15 @@ namespace LoginServer
                 ClientDisconnected();
             }
 
+            Console.WriteLine("Aborting Thread.");
+            Thread.CurrentThread.Abort();
+
+
         }
 
         #region ClientValidation
 
-        private void ValidateClient(byte[] adminDetailsFromClient)
+        private void ValidateClient(byte[] adminDetailsFromClient, Client client)
         {
             //ASCIIEncoding encoder = new ASCIIEncoding();
             //string str = encoder.GetString(adminDetailsFromClient, 0, adminDetailsFromClient.Length);
@@ -393,17 +401,17 @@ namespace LoginServer
 
             if (username && password)
             {
-                IsLoggedIn(true);
+                client.isLoggedIn = true;
                 AllowMessaging();
             }
             else
             {
-                IsLoggedIn(false);
+                client.isLoggedIn = false;
                 //str = "Login atempt failed.";
                 //byte[] message = encoder.GetBytes(str);
             }
 
-            SendClientValidationMessage();
+            SendClientValidationMessage(client);
         }
 
         private bool ValidateUsername(string adminName, string testName)
@@ -417,12 +425,12 @@ namespace LoginServer
         }
 
 
-        private void SendClientValidationMessage()
+        private void SendClientValidationMessage(Client client)
         {
             ASCIIEncoding encoder = new ASCIIEncoding();
             byte[] message;
 
-            if (IsLoggedIn())
+            if (client.isLoggedIn)
             {
                 message = encoder.GetBytes("You are now logged in.");
 
