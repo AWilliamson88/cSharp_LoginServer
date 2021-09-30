@@ -19,6 +19,11 @@ namespace LoginServer
             InitializeComponent();
         }
 
+        /// <summary>
+        /// Sets up the program when the form first starts.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void LoginServerForm_Load(object sender, EventArgs e)
         {
             pipeServer.MessageRecieved += pipeServer_MessageReceived;
@@ -28,12 +33,48 @@ namespace LoginServer
             NoClients();
         }
 
+        /// <summary>
+        /// This method returns the admin details.
+        /// </summary>
+        /// <returns></returns>
+        private String GetAdminDetails()
+        {
+            return AdminUsernameTB.Text + "," + AdminPasswordTB.Text;
+        }
+
+        /// <summary>
+        /// Methods used to allow the server class to call methods on the form.
+        /// </summary>
+        /// <returns></returns>
+        #region HandlerMethods
+        private string pipeServer_GetAdminDetails()
+        {
+            return (string)Invoke(new PipeServer.GetAdminDetailsHandler(GetAdminDetails));
+        }
 
         private void pipeServer_AllowMessaging()
         {
             Invoke(new PipeServer.AllowMessagingHandler(AllowMessaging));
         }
 
+        private void pipeServer_MessageReceived(byte[] message)
+        {
+            Invoke(new PipeServer.MessageReceivedHandler(DisplayMessageReceived),
+                new object[] { message });
+        }
+
+        private void pipeServer_ClientDisconnected()
+        {
+            Invoke(new PipeServer.ClientDisconnectedHandler(ClientDisconnected));
+        }
+        #endregion
+
+        // DisplayMessage() and AllowMessaging().
+        #region Messaging
+
+        /// <summary>
+        /// Allows messaging after atleast one client is connected.
+        /// </summary>
         private void AllowMessaging()
         {
             SendBtn.Enabled = true;
@@ -46,43 +87,24 @@ namespace LoginServer
             MessageLogTB.Text += str + "\r\n";
         }
 
-        private void NoClients()
+        /// <summary>
+        /// Display the received message.
+        /// </summary>
+        /// <param name="message">The message received.</param>
+        private void DisplayMessageReceived(byte[] message)
         {
-            SendBtn.Enabled = false;
-            SendMessageTB.Enabled = false;
-            ClearBtn.Enabled = false;
-        }
+            string str = Utility.ConvertToString(message);
 
-        private void StartBtn_Click(object sender, EventArgs e)
-        {
-            // If the server is not running start it.
-            if(pipeServer.IsRunning())
-            {
-                MessageBox.Show("Server is already running", "Error");
-            }
-            else
-            {
-                pipeServer.Start(PipeNameTB.Text);
-                StartBtn.Enabled = false;
-                MessageLogTB.Text += "The Server is Now Running: \r\n";
-            }
+            MessageLogTB.Text += str + "\r\n";
         }
+        #endregion
 
-        private string pipeServer_GetAdminDetails()
-        {
-            return (string) Invoke(new PipeServer.GetAdminDetailsHandler(GetAdminDetails));   
-        }
-
-        private String GetAdminDetails()
-        {
-            return AdminUsernameTB.Text + "," + AdminPasswordTB.Text;
-        }
-
-        private void pipeServer_ClientDisconnected()
-        {
-            Invoke(new PipeServer.ClientDisconnectedHandler(ClientDisconnected));
-        }
-
+        // ClientDisconnected() & NoClients().
+        #region ClientDisconnectedMethods
+        /// <summary>
+        /// Prints the number of connected clients everytime one connects or disconnects.
+        /// Calls the NoClients() when there are no clients.
+        /// </summary>
         private void ClientDisconnected()
         {
             string str = "Total Clients: " + pipeServer.TotalConnectedClients;
@@ -95,21 +117,36 @@ namespace LoginServer
             }
         }
 
-        private void pipeServer_MessageReceived(byte[] message)
+        /// <summary>
+        /// This method dissables the messaging functions when there is no clients connected.
+        /// </summary>
+        private void NoClients()
         {
-            Invoke(new PipeServer.MessageReceivedHandler(DisplayMessageReceived),
-                new object[] { message });
+            SendBtn.Enabled = false;
+            SendMessageTB.Enabled = false;
+            ClearBtn.Enabled = false;
+        }
+        #endregion
+
+        #region ButtonClickMethods
+
+        /// <summary>
+        /// Starts the server.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void StartBtn_Click(object sender, EventArgs e)
+        {
+            pipeServer.Start(PipeNameTB.Text);
+            StartBtn.Enabled = false;
+            MessageLogTB.Text += "The Server is Now Running: \r\n";
         }
 
-        private void DisplayMessageReceived(byte[] message)
-        {
-            //ASCIIEncoding encoder = new ASCIIEncoding();
-            //string str = encoder.GetString(message, 0, message.Length);
-            string str = Utility.ConvertToString(message);
-
-            MessageLogTB.Text += str + "\r\n";
-        }
-
+        /// <summary>
+        /// Send the text in the send message box to all the clients.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void SendBtn_Click(object sender, EventArgs e)
         {
             if (!String.IsNullOrWhiteSpace(SendMessageTB.Text))
@@ -122,10 +159,16 @@ namespace LoginServer
             SendMessageTB.Focus();
         }
 
+        /// <summary>
+        /// Clears the message log.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ClearBtn_Click(object sender, EventArgs e)
         {
             MessageLogTB.Clear();
             SendMessageTB.Focus();
         }
+        #endregion
     }
 }

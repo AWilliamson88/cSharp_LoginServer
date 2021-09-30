@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace LoginServer
 {
+    /// <summary>
+    /// This class generates the salt.
+    /// </summary>
     public static class SaltGenerator
     {
         private static RNGCryptoServiceProvider m_cryptoServiceProvider = null;
@@ -17,6 +20,10 @@ namespace LoginServer
             m_cryptoServiceProvider = new RNGCryptoServiceProvider();
         }
 
+        /// <summary>
+        /// Creates a salt.
+        /// </summary>
+        /// <returns>The Salt Created.</returns>
         public static string GetSaltString()
         {
             // Lets create a byte array to store the salt bytes

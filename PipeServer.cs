@@ -71,8 +71,6 @@ namespace LoginServer
             public SafeFileHandle handle;
             public FileStream stream;
             public bool isLoggedIn;
-
-
         }
 
         /// <summary>
@@ -85,10 +83,12 @@ namespace LoginServer
         /// </summary>
         private string pipeName;
 
+        /// <summary>
+        /// The size of the stream buffer.
+        /// </summary>
         public const int BUFFER_SIZE = 4096;
 
         #region Accessors
-
 
         /// <summary>
         /// Returns true if the server is running.
@@ -107,11 +107,6 @@ namespace LoginServer
         private void IsRunning(bool b)
         {
             running = b;
-            //if (b)
-            //{
-            //    string str = "The Server is Running.";
-            //    MessageRecieved(Utility.ConvertToBytes(str));
-            //}
         }
 
         /// <summary>
@@ -149,7 +144,8 @@ namespace LoginServer
 
         #endregion
 
-        
+
+        #region Handlers
 
         /// <summary>
         /// Handles the messages recieved from the clients pipe.
@@ -193,6 +189,12 @@ namespace LoginServer
         /// </summary>
         public event AllowMessagingHandler AllowMessaging;
 
+        #endregion
+
+        /// <summary>
+        /// Starts the server.
+        /// </summary>
+        /// <param name="pipename">The name of the pipe being used.</param>
         public void Start(string pipename)
         {
             PipeNameIs(pipename);
@@ -206,9 +208,12 @@ namespace LoginServer
 
             IsRunning(true);
 
-            
+
         }
 
+        /// <summary>
+        /// When a new client connects, sets the stream and creates a new thread to listen to them.
+        /// </summary>
         public void ListenForClients()
         {
             SECURITY_DESCRIPTOR sd = new SECURITY_DESCRIPTOR();
@@ -270,6 +275,13 @@ namespace LoginServer
 
                 client.stream = new FileStream(client.handle, FileAccess.ReadWrite, BUFFER_SIZE, true);
 
+                // Get the login details
+                // send the login details solely to that client.
+                string str = "Your Username,Password are: ";
+                Byte[] login = Utility.ConvertToBytes(str + GetAdminDetails());
+                SendMessageToOne(login, client);
+
+                // Create a new thread to wait for that clients mesages.
                 Thread readThread = new Thread(Read)
                 {
                     IsBackground = true
@@ -283,10 +295,15 @@ namespace LoginServer
             Marshal.FreeCoTaskMem(ptrSA);
         }
 
+        /// <summary>
+        /// Read messages from the client and display them if they are logged in,
+        /// otherwise validate the login details.
+        /// </summary>
+        /// <param name="clientObj"></param>
         private void Read(Object clientObj)
         {
             Client client = (Client)clientObj;
-            
+
             byte[] buffer = new byte[BUFFER_SIZE];
 
             while (true)
@@ -334,17 +351,14 @@ namespace LoginServer
 
                     if (MessageRecieved != null)
                     {
-                        
+
                         if (client.isLoggedIn)
                         {
                             MessageRecieved(ms.ToArray());
                         }
                         else
                         {
-                            if (!ValidateClient(ms.ToArray(), client))
-                            {
-                                break;
-                            }
+                            ValidateClient(ms.ToArray(), client);
                         }
                     }
                 }
@@ -370,41 +384,49 @@ namespace LoginServer
                 ClientDisconnected();
             }
 
-            Console.WriteLine("Aborting Thread.");
             Thread.CurrentThread.Abort();
-
 
         }
 
         #region ClientValidation
 
+        /// <summary>
+        /// Checks if the client logged in with the correct username and password.
+        /// </summary>
+        /// <param name="adminDetailsFromClient">The login details from the client.</param>
+        /// <param name="client">The client.</param>
+        /// <returns></returns>
         private bool ValidateClient(byte[] adminDetailsFromClient, Client client)
         {
-            string str = Utility.ConvertToString(adminDetailsFromClient);
+                string str = Utility.ConvertToString(adminDetailsFromClient);
 
-            string[] clientAdminDetails = str.Split(',');
-            string[] adminDetails = GetAdminDetails().Split(',');
+                string[] clientAdminDetails = str.Split(',');
+                string[] adminDetails = GetAdminDetails().Split(',');
 
-            bool username = ValidateUsername(adminDetails[0], clientAdminDetails[0]);
+                // Test the username.
+                bool username = ValidateUsername(adminDetails[0], clientAdminDetails[0]);
 
-            PasswordTester LH = new PasswordTester();
-            bool password = LH.TestPasswords(adminDetails[1], clientAdminDetails[1]);
+                // Test the password.
+                PasswordTester LH = new PasswordTester();
+                bool password = LH.TestPasswords(adminDetails[1], clientAdminDetails[1]);
 
-            if (username && password)
-            {
-                client.isLoggedIn = true;
-                AllowMessaging();
-            }
-            else
-            {
-                client.isLoggedIn = false;
-            }
+                if (username && password)
+                {
+                    client.isLoggedIn = true;
+                    AllowMessaging();
+                }
 
-            SendClientValidationMessage(client);
+                SendClientValidationMessage(client);
 
             return client.isLoggedIn;
         }
 
+        /// <summary>
+        /// This method checks if the username is correct.
+        /// </summary>
+        /// <param name="adminName">The Correct username.</param>
+        /// <param name="testName">The username to test.</param>
+        /// <returns></returns>
         private bool ValidateUsername(string adminName, string testName)
         {
             if (adminName.CompareTo(testName) == 0)
@@ -415,7 +437,10 @@ namespace LoginServer
             return false;
         }
 
-
+        /// <summary>
+        /// Send a message to the client indicating if the login attempt was successful.
+        /// </summary>
+        /// <param name="client">The client to send the message to.</param>
         private void SendClientValidationMessage(Client client)
         {
             ASCIIEncoding encoder = new ASCIIEncoding();
@@ -424,23 +449,27 @@ namespace LoginServer
             if (client.isLoggedIn)
             {
                 message = encoder.GetBytes("You are now logged in.");
-
             }
             else
             {
                 message = encoder.GetBytes("Incorrect username or password.");
             }
-
             SendMessageToOne(message, client);
         }
 
         #endregion
 
+        #region Messaging
+
+        /// <summary>
+        /// Send a message to a single client.
+        /// </summary>
+        /// <param name="message">The message to send.</param>
+        /// <param name="client">The client to send it to.</param>
         public void SendMessageToOne(byte[] message, Client client)
         {
             lock (clients)
             {
-                // Get the entire stream length.
                 byte[] messageLength = BitConverter.GetBytes(message.Length);
 
                 client.stream.Write(messageLength, 0, 4);
@@ -450,16 +479,18 @@ namespace LoginServer
             }
         }
 
+        /// <summary>
+        /// Send a message to all the clients that are in the list.
+        /// </summary>
+        /// <param name="message">The message to send.</param>
         public void SendMessageToAll(byte[] message)
         {
             lock (clients)
             {
-                // Get the entire stream length.
                 byte[] messageLength = BitConverter.GetBytes(message.Length);
 
                 foreach (Client client in clients)
                 {
-                    // length
                     client.stream.Write(messageLength, 0, 4);
 
                     client.stream.Write(message, 0, message.Length);
@@ -468,9 +499,6 @@ namespace LoginServer
             }
         }
 
-
-
-
-
+        #endregion
     }
 }
