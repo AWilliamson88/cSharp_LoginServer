@@ -265,21 +265,16 @@ namespace LoginServer
                     handle = clientHandle
                 };
 
-                Console.WriteLine(clientHandle.GetType().ToString());
-
                 lock (clients)
                     clients.Add(client);
+
+                client.stream = new FileStream(client.handle, FileAccess.ReadWrite, BUFFER_SIZE, true);
 
                 Thread readThread = new Thread(Read)
                 {
                     IsBackground = true
                 };
-
-                Console.WriteLine("New thread created." + readThread.ManagedThreadId);
-
                 readThread.Start(client);
-
-                Console.WriteLine(PipeNameIs());
             }
 
             // Free up the pointers.
@@ -291,7 +286,7 @@ namespace LoginServer
         private void Read(Object clientObj)
         {
             Client client = (Client)clientObj;
-            client.stream = new FileStream(client.handle, FileAccess.ReadWrite, BUFFER_SIZE, true);
+            
             byte[] buffer = new byte[BUFFER_SIZE];
 
             while (true)
@@ -336,22 +331,20 @@ namespace LoginServer
                         break;
                     }
 
+
                     if (MessageRecieved != null)
                     {
-                        /////////////////////////////
-
-                        Console.WriteLine(client.handle.ToString());
-                        Console.WriteLine(client.ToString());
-                        Console.WriteLine(client.stream.Name);
-
-                        ////////////////////////////
+                        
                         if (client.isLoggedIn)
                         {
                             MessageRecieved(ms.ToArray());
                         }
                         else
                         {
-                            ValidateClient(ms.ToArray(), client);
+                            if (!ValidateClient(ms.ToArray(), client))
+                            {
+                                break;
+                            }
                         }
                     }
                 }
@@ -385,10 +378,8 @@ namespace LoginServer
 
         #region ClientValidation
 
-        private void ValidateClient(byte[] adminDetailsFromClient, Client client)
+        private bool ValidateClient(byte[] adminDetailsFromClient, Client client)
         {
-            //ASCIIEncoding encoder = new ASCIIEncoding();
-            //string str = encoder.GetString(adminDetailsFromClient, 0, adminDetailsFromClient.Length);
             string str = Utility.ConvertToString(adminDetailsFromClient);
 
             string[] clientAdminDetails = str.Split(',');
@@ -407,11 +398,11 @@ namespace LoginServer
             else
             {
                 client.isLoggedIn = false;
-                //str = "Login atempt failed.";
-                //byte[] message = encoder.GetBytes(str);
             }
 
             SendClientValidationMessage(client);
+
+            return client.isLoggedIn;
         }
 
         private bool ValidateUsername(string adminName, string testName)
@@ -440,12 +431,26 @@ namespace LoginServer
                 message = encoder.GetBytes("Incorrect username or password.");
             }
 
-            SendMessage(message);
+            SendMessageToOne(message, client);
         }
 
         #endregion
 
-        public void SendMessage(byte[] message)
+        public void SendMessageToOne(byte[] message, Client client)
+        {
+            lock (clients)
+            {
+                // Get the entire stream length.
+                byte[] messageLength = BitConverter.GetBytes(message.Length);
+
+                client.stream.Write(messageLength, 0, 4);
+
+                client.stream.Write(message, 0, message.Length);
+                client.stream.Flush();
+            }
+        }
+
+        public void SendMessageToAll(byte[] message)
         {
             lock (clients)
             {

@@ -64,6 +64,7 @@ namespace LoginServer
             {
                 pipeServer.Start(PipeNameTB.Text);
                 StartBtn.Enabled = false;
+                MessageLogTB.Text += "The Server is Now Running: \r\n";
             }
         }
 
@@ -115,7 +116,7 @@ namespace LoginServer
             {
                 byte[] messageBuffer = Utility.ConvertToBytes(SendMessageTB.Text);
 
-                pipeServer.SendMessage(messageBuffer);
+                pipeServer.SendMessageToAll(messageBuffer);
             }
             SendMessageTB.Clear();
             SendMessageTB.Focus();
