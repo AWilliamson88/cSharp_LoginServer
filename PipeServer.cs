@@ -7,6 +7,21 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
+
+/// <summary>
+/// Author: Andrew Williamson
+/// Student ID: P113357
+/// 
+/// AT 2 - Question 4 
+/// 
+/// JMC wishes to have a standard login functionality for all their 
+/// terminals around the ship, this should be accomplished via logging 
+/// into a central server to test user and password combinations 
+/// (you must have at least one administrator password setup)
+/// You must create a Server Client program it must use IPC to communicate.
+/// Your program must have a login that uses standard hashing techniques.
+/// 
+/// </summary>
 namespace LoginServer
 {
 
@@ -68,6 +83,8 @@ namespace LoginServer
 
         public class Client
         {
+            public int id;
+            public static int number = 1;
             public SafeFileHandle handle;
             public FileStream stream;
             public bool isLoggedIn;
@@ -89,6 +106,11 @@ namespace LoginServer
         public const int BUFFER_SIZE = 4096;
 
         #region Accessors
+
+        public Thread getListenThread()
+        {
+            return listenThread;
+        }
 
         /// <summary>
         /// Returns true if the server is running.
@@ -287,6 +309,10 @@ namespace LoginServer
                     IsBackground = true
                 };
                 readThread.Start(client);
+
+                client.id = Client.number;
+                Client.number++;
+
             }
 
             // Free up the pointers.
@@ -341,16 +367,26 @@ namespace LoginServer
                     {
                         break;
                     }
-
+                    Console.Out.WriteLine();
+                    Console.Out.WriteLine("Bytes read before client disconnected." + bytesRead);
                     // Client has disconnected.
                     if (bytesRead == 0)
                     {
                         break;
                     }
-
+                    Console.Out.WriteLine("Bytes read after client disconnected." + bytesRead);
+                    Console.Out.WriteLine();
 
                     if (MessageRecieved != null)
                     {
+                        Console.Out.WriteLine();
+                        string str = Utility.ConvertToString(ms.ToArray());
+                        Console.Out.WriteLine("Now printing the MessageRecieved.");
+                        Console.Out.WriteLine(str);
+                        Console.Out.WriteLine("After the MessageRecieved from the client: " + client.id);
+                        Console.Out.WriteLine("Total clients: " + clients.Count);
+                        Console.Out.WriteLine("Clients Handle: " + client.handle.ToString());
+                        Console.Out.WriteLine();
 
                         if (client.isLoggedIn)
                         {
@@ -358,6 +394,7 @@ namespace LoginServer
                         }
                         else
                         {
+                            Console.Out.WriteLine(Thread.CurrentThread.ManagedThreadId + " in Read");
                             ValidateClient(ms.ToArray(), client);
                         }
                     }
@@ -396,13 +433,18 @@ namespace LoginServer
         /// <param name="adminDetailsFromClient">The login details from the client.</param>
         /// <param name="client">The client.</param>
         /// <returns></returns>
-        private bool ValidateClient(byte[] adminDetailsFromClient, Client client)
+        private void ValidateClient(byte[] adminDetailsFromClient, Client client)
         {
-                string str = Utility.ConvertToString(adminDetailsFromClient);
+            string str = Utility.ConvertToString(adminDetailsFromClient);
+            Console.Out.WriteLine("Now printing the message from the client.");
+            Console.Out.WriteLine(str);
+            Console.Out.WriteLine("After the message from the client.");
 
-                string[] clientAdminDetails = str.Split(',');
-                string[] adminDetails = GetAdminDetails().Split(',');
-
+            string[] clientAdminDetails = str.Split(',');
+            string[] adminDetails = GetAdminDetails().Split(',');
+            if (clientAdminDetails.Length == 2
+                && adminDetails.Length == 2)
+            {
                 // Test the username.
                 bool username = ValidateUsername(adminDetails[0], clientAdminDetails[0]);
 
@@ -416,9 +458,10 @@ namespace LoginServer
                     AllowMessaging();
                 }
 
+                //Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
+                Console.Out.WriteLine(Thread.CurrentThread.ManagedThreadId + " in ValidateClient");
                 SendClientValidationMessage(client);
-
-            return client.isLoggedIn;
+            }
         }
 
         /// <summary>
@@ -454,6 +497,7 @@ namespace LoginServer
             {
                 message = encoder.GetBytes("Incorrect username or password.");
             }
+            Console.Out.WriteLine(Thread.CurrentThread.ManagedThreadId + " in SendClientValidationMessage");
             SendMessageToOne(message, client);
         }
 

@@ -217,6 +217,7 @@ namespace LoginServer
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "LoginServerForm";
             this.Text = "Server";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.LoginServerForm_FormClosing);
             this.Load += new System.EventHandler(this.LoginServerForm_Load);
             AdminDetailsGP.ResumeLayout(false);
             AdminDetailsGP.PerformLayout();
